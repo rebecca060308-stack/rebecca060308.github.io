@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TeamSync</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
+body{background:#f5f7fb;}
+header{background:#2563eb;color:white;padding:20px;text-align:center;}
+.container{max-width:1200px;margin:auto;padding:20px;}
+.card{background:white;padding:20px;border-radius:15px;box-shadow:0 3px 10px rgba(0,0,0,.1);margin-bottom:20px;}
+input,button{padding:10px;border-radius:8px;border:1px solid #ddd;}
+button{cursor:pointer;background:#2563eb;color:white;border:none;}
+button:hover{opacity:.9;}
+.login{display:flex;gap:10px;flex-wrap:wrap;}
+.team-box{display:flex;gap:10px;margin-top:10px;}
+.schedule{margin-top:10px;}
+.schedule button{margin-right:10px;}
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:20px;}
+.column{background:#eef2ff;padding:15px;border-radius:12px;min-height:250px;}
+.column h3{margin-bottom:10px;}
+.task{background:white;padding:10px;border-radius:8px;margin-bottom:10px;cursor:pointer;}
+.progress{margin-top:15px;font-weight:bold;}
+@media(max-width:768px){.board{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<header>
+<h1>TeamSync</h1>
+<p>대학생 팀 프로젝트 협업 플랫폼</p>
+</header>
+
+<div class="container">
+<div class="card">
+<h2>로그인</h2>
+<div class="login">
+<input type="text" placeholder="아이디">
+<input type="password" placeholder="비밀번호">
+<button onclick="login()">로그인</button>
+<button onclick="signup()">회원가입</button>
+</div>
+<p id="loginStatus"></p>
+</div>
+
+<div class="card">
+<h2>팀 생성</h2>
+<div class="team-box">
+<input id="teamName" placeholder="팀 이름">
+<button onclick="createTeam()">생성</button>
+</div>
+<p id="teamResult"></p>
+</div>
+
+<div class="card">
+<h2>회의 시간 추천</h2>
+<p>팀원 공통 가능 시간 분석 결과</p>
+<div class="schedule">
+<button>월요일 19:00</button>
+<button>화요일 18:00</button>
+<button>수요일 20:00</button>
+</div>
+</div>
+
+<div class="card">
+<h2>칸반보드</h2>
+<input id="taskInput" placeholder="업무 입력">
+<button onclick="addTask()">추가</button>
+
+<div class="progress">진행률 : <span id="progress">0%</span></div>
+
+<div class="board">
+<div class="column"><h3>To Do</h3><div id="todo"></div></div>
+<div class="column"><h3>Doing</h3><div id="doing"></div></div>
+<div class="column"><h3>Done</h3><div id="done"></div></div>
+</div>
+</div>
+</div>
+
+<script>
+let totalTasks=0;
+let doneTasks=0;
+
+function login(){
+document.getElementById("loginStatus").innerHTML="✅ 로그인 성공 (Demo)";
+}
+function signup(){
+alert("회원가입 페이지로 이동");
+}
+function createTeam(){
+let name=document.getElementById("teamName").value;
+if(name===""){alert("팀 이름 입력");return;}
+document.getElementById("teamResult").innerHTML="🎉 '"+name+"' 팀 생성 완료";
+}
+function addTask(){
+const text=document.getElementById("taskInput").value;
+if(text==="") return;
+
+const task=document.createElement("div");
+task.className="task";
+task.innerHTML=text;
+task.dataset.stage="todo";
+
+task.onclick=function(){
+if(task.dataset.stage==="todo"){
+document.getElementById("doing").appendChild(task);
+task.dataset.stage="doing";
+}else if(task.dataset.stage==="doing"){
+document.getElementById("done").appendChild(task);
+task.dataset.stage="done";
+doneTasks++;
+updateProgress();
+}
+};
+
+document.getElementById("todo").appendChild(task);
+document.getElementById("taskInput").value="";
+totalTasks++;
+updateProgress();
+}
+
+function updateProgress(){
+if(totalTasks===0){
+document.getElementById("progress").innerHTML="0%";
+return;
+}
+let value=Math.round(doneTasks/totalTasks*100);
+document.getElementById("progress").innerHTML=value+"%";
+}
+</script>
+</body>
+</html>
