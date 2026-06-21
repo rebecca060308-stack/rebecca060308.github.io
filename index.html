@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoodMate - 대학생 정서 관리 서비스</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #a5b4fc;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --happy: #fbbf24;
+            --sad: #60a5fa;
+            --angry: #f87171;
+            --tired: #94a3b8;
+            --normal: #34d399;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Auth Screen */
+        #auth-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .auth-card {
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        input[type="text"], input[type="email"], input[type="password"], textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+
+        button:hover { opacity: 0.9; }
+
+        .toggle-auth {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: var(--primary);
+            cursor: pointer;
+        }
+
+        /* Main Dashboard */
+        #main-app { display: none; }
+
+        nav {
+            background: var(--card);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-links span {
+            margin-left: 1.5rem;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--card);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 1.5rem;
+        }
+
+        h2 { margin-top: 0; font-size: 1.25rem; }
+
+        /* Emotion Selection */
+        .emotion-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .emotion-item {
+            text-align: center;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            transition: background 0.2s;
+        }
+
+        .emotion-item.active {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .emotion-icon { font-size: 2rem; }
+
+        /* Stress Factors */
+        .stress-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .stress-item {
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        /* Calendar */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            text-align: center;
+        }
+
+        .calendar-day {
+            height: 60px;
+            border: 1px solid #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            border-radius: 4px;
+        }
+
+        .calendar-day.has-data { cursor: pointer; background: #fdfdfd; }
+        .calendar-day.has-data:hover { background: #f1f5f9; }
+
+        /* Dashboard Charts */
+        .chart-wrap {
+            height: 300px;
+            position: relative;
+        }
+
+        .report-box {
+            background: #f1f5f9;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            line-height: 1.6;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-screen">
+        <div class="auth-card">
+            <h1 id="auth-title" style="text-align:center; color:var(--primary)">MoodMate</h1>
+            <p id="auth-desc" style="text-align:center; font-size:0.9rem; margin-bottom:2rem;">대학생을 위한 감정 기록 서비스</p>
+            
+            <div class="input-group">
+                <label>이메일</label>
+                <input type="email" id="auth-email" placeholder="example@univ.ac.kr">
+            </div>
+            <div class="input-group">
+                <label>비밀번호</label>
+                <input type="password" id="auth-pw" placeholder="8자리 이상 입력">
+            </div>
+            <div class="input-group hidden" id="pw-confirm-group">
+                <label>비밀번호 확인</label>
+                <input type="password" id="auth-pw-confirm">
+            </div>
+
+            <button id="auth-btn">로그인</button>
+            <div class="toggle-auth" id="auth-toggle">계정이 없으신가요? 회원가입</div>
+        </div>
+    </div>
+
+    <div id="main-app">
+        <nav>
+            <div style="font-weight: bold; color: var(--primary); font-size: 1.2rem;">MoodMate</div>
+            <div class="nav-links">
+                <span onclick="showView('record')">기록하기</span>
+                <span onclick="showView('calendar')">캘린더</span>
+                <span onclick="showView('stats')">통계/분석</span>
+                <span onclick="handleLogout()" style="color: #ef4444;">로그아웃</span>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div id="view-record">
+                <div class="grid">
+                    <div class="card">
+                        <h2>1. 오늘의 감정</h2>
+                        <div class="emotion-buttons" id="emotion-select">
+                            <div class="emotion-item" data-mood="행복"><div class="emotion-icon">😊</div><span>행복</span></div>
+                            <div class="emotion-item" data-mood="보통"><div class="emotion-icon">😐</div><span>보통</span></div>
+                            <div class="emotion-item" data-mood="우울"><div class="emotion-icon">😢</div><span>우울</span></div>
+                            <div class="emotion-item" data-mood="화남"><div class="emotion-icon">😡</div><span>화남</span></div>
+                            <div class="emotion-item" data-mood="피곤"><div class="emotion-icon">😴</div><span>피곤</span></div>
+                        </div>
+                        <label style="font-size: 0.9rem;">감정 강도 (1~5)</label>
+                        <input type="range" id="mood-level" min="1" max="5" value="3" style="width:100%; margin-top:0.5rem;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#666;">
+                            <span>약함</span><span>매우 강함</span>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2>2. 스트레스 요인 (중요도 1~5)</h2>
+                        <div class="stress-grid" id="stress-factors">
+                            <div class="stress-item"><input type="checkbox" value="시험"> 시험 <input type="number" min="1" max="5" value="1" style="width:35px; margin-left:auto;"></div>
+                            <div class="stress-item"><input type="checkbox" value="과제"> 과제 <input type="number" min="1" max="5" value="1" style="width:35px; margin-left:auto;"></div>
+                            <div class="stress-item"><input type="checkbox" value="인간관계"> 인간관계 <input type="number" min="1" max="5" value="1" style="width:35px; margin-left:auto;"></div>
+                            <div class="stress-item"><input type="checkbox" value="연애"> 연애 <input type="number" min="1" max="5" value="1" style="width:35px; margin-left:auto;"></div>
+                            <div class="stress-item"><input type="checkbox" value="취업"> 취업 <input type="number" min="1" max="5" value="1" style="width:35px; margin-left:auto;"></div>
+                            <div class="stress-item"><input type="checkbox" value="경제"> 경제 <input type="number" min="1" max="5" value="1" style="width:35px; margin-left:auto;"></div>
+                            <div class="stress-item"><input type="checkbox" value="건강"> 건강 <input type="number" min="1" max="5" value="1" style="width:35px; margin-left:auto;"></div>
+                            <div class="stress-item"><input type="checkbox" value="기타"> 기타 <input type="number" min="1" max="5" value="1" style="width:35px; margin-left:auto;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>3. 오늘의 일기</h2>
+                    <textarea id="diary-text" rows="4" placeholder="오늘의 일을 500자 내로 자유롭게 적어보세요..."></textarea>
+                    <button id="save-btn" style="margin-top: 1rem;">오늘의 감정 저장하기</button>
+                </div>
+            </div>
+
+            <div id="view-calendar" class="hidden">
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                        <h2 id="calendar-title">2023년 10월</h2>
+                    </div>
+                    <div class="calendar-grid" id="calendar-body">
+                        </div>
+                </div>
+                <div id="day-detail" class="card hidden">
+                    <h2 id="detail-date">날짜 상세</h2>
+                    <p id="detail-content"></p>
+                </div>
+            </div>
+
+            <div id="view-stats" class="hidden">
+                <div class="grid">
+                    <div class="card">
+                        <h2>감정 빈도 (최근 30일)</h2>
+                        <div class="chart-wrap">
+                            <canvas id="moodChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h2>스트레스 패턴 분석</h2>
+                        <div class="chart-wrap">
+                            <canvas id="stressChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>MoodMate AI 개인 리포트</h2>
+                    <div class="report-box" id="ai-report">
+                        데이터를 분석 중입니다... 기록이 충분하지 않으면 리포트 생성이 어려울 수 있습니다.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. 데이터 초기화 및 상태 관리 ---
+        let currentUser = JSON.parse(sessionStorage.getItem('currentUser')) || null;
+        let isSignup = false;
+        let selectedMood = '';
+
+        const moodIcons = { "행복": "😊", "보통": "😐", "우울": "😢", "화남": "😡", "피곤": "😴" };
+
+        // --- 2. 인증 로직 ---
+        const authBtn = document.getElementById('auth-btn');
+        const authToggle = document.getElementById('auth-toggle');
+
+        authToggle.onclick = () => {
+            isSignup = !isSignup;
+            document.getElementById('auth-title').innerText = isSignup ? "회원가입" : "MoodMate";
+            document.getElementById('pw-confirm-group').classList.toggle('hidden');
+            authBtn.innerText = isSignup ? "가입하기" : "로그인";
+            authToggle.innerText = isSignup ? "이미 계정이 있나요? 로그인" : "계정이 없으신가요? 회원가입";
+        };
+
+        authBtn.onclick = () => {
+            const email = document.getElementById('auth-email').value;
+            const pw = document.getElementById('auth-pw').value;
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+
+            if (isSignup) {
+                const confirm = document.getElementById('auth-pw-confirm').value;
+                if (pw !== confirm) return alert("비밀번호가 일치하지 않습니다.");
+                if (pw.length < 8) return alert("비밀번호는 8자리 이상이어야 합니다.");
+                
+                users.push({ email, pw, uid: Date.now() });
+                localStorage.setItem('users', JSON.stringify(users));
+                alert("회원가입 성공! 로그인해주세요.");
+                authToggle.click();
+            } else {
+                const user = users.find(u => u.email === email && u.pw === pw);
+                if (user) {
+                    currentUser = user;
+                    sessionStorage.setItem('currentUser', JSON.stringify(user));
+                    initApp();
+                } else {
+                    alert("정보가 일치하지 않습니다.");
+                }
+            }
+        };
+
+        function handleLogout() {
+            sessionStorage.removeItem('currentUser');
+            location.reload();
+        }
+
+        // --- 3. 메인 앱 기능 ---
+        function initApp() {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('main-app').style.display = 'block';
+            showView('record');
+        }
+
+        if (currentUser) initApp();
+
+        function showView(view) {
+            ['view-record', 'view-calendar', 'view-stats'].forEach(v => {
+                document.getElementById(v).classList.add('hidden');
+            });
+            document.getElementById('view-' + view).classList.remove('hidden');
+
+            if (view === 'calendar') renderCalendar();
+            if (view === 'stats') renderCharts();
+        }
+
+        // 감정 아이콘 선택 이벤트
+        document.querySelectorAll('.emotion-item').forEach(item => {
+            item.onclick = function() {
+                document.querySelectorAll('.emotion-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+                selectedMood = this.dataset.mood;
+            };
+        });
+
+        // 데이터 저장
+        document.getElementById('save-btn').onclick = () => {
+            if (!selectedMood) return alert("오늘의 감정을 선택해주세요!");
+            
+            const moodLevel = document.getElementById('mood-level').value;
+            const diary = document.getElementById('diary-text').value;
+            const stressFactors = [];
+            
+            document.querySelectorAll('#stress-factors .stress-item').forEach(item => {
+                const cb = item.querySelector('input[type="checkbox"]');
+                const val = item.querySelector('input[type="number"]').value;
+                if (cb.checked) {
+                    stressFactors.push({ name: cb.value, severity: parseInt(val) });
+                }
+            });
+
+            const entry = {
+                uid: currentUser.uid,
+                date: new Date().toISOString().split('T')[0],
+                mood: selectedMood,
+                moodLevel,
+                stressFactors,
+                diary,
+                createdAt: new Date().getTime()
+            };
+
+            let entries = JSON.parse(localStorage.getItem('moodEntries')) || [];
+            // 같은 날짜 기록이 있으면 덮어쓰기
+            entries = entries.filter(e => !(e.uid === currentUser.uid && e.date === entry.date));
+            entries.push(entry);
+            localStorage.setItem('moodEntries', JSON.stringify(entries));
+
+            alert("오늘의 정서가 기록되었습니다!");
+            showView('calendar');
+        };
+
+        // --- 4. 캘린더/통계 렌더링 ---
+        function renderCalendar() {
+            const body = document.getElementById('calendar-body');
+            const entries = JSON.parse(localStorage.getItem('moodEntries')) || [];
+            const myEntries = entries.filter(e => e.uid === currentUser.uid);
+            
+            const now = new Date();
+            document.getElementById('calendar-title').innerText = `${now.getFullYear()}년 ${now.getMonth()+1}월`;
+            
+            body.innerHTML = '';
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+
+            for (let i = 1; i <= lastDay; i++) {
+                const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const dayData = myEntries.find(e => e.date === dateStr);
+                
+                const div = document.createElement('div');
+                div.className = 'calendar-day' + (dayData ? ' has-data' : '');
+                div.innerHTML = `<div>${i}</div>`;
+                if (dayData) {
+                    div.innerHTML += `<div class="emotion-icon" style="font-size:1.2rem">${moodIcons[dayData.mood]}</div>`;
+                    div.onclick = () => showDetail(dayData);
+                }
+                body.appendChild(div);
+            }
+        }
+
+        function showDetail(data) {
+            const detail = document.getElementById('day-detail');
+            detail.classList.remove('hidden');
+            document.getElementById('detail-date').innerText = `${data.date} 기록`;
+            document.getElementById('detail-content').innerHTML = `
+                <strong>감정:</strong> ${data.mood} (강도: ${data.moodLevel})<br>
+                <strong>스트레스 요인:</strong> ${data.stressFactors.map(s => `${s.name}(${s.severity})`).join(', ') || '없음'}<br><br>
+                <strong>일기:</strong><br>${data.diary || '작성한 내용이 없습니다.'}
+            `;
+        }
+
+        let moodChartInstance = null;
+        let stressChartInstance = null;
+
+        function renderCharts() {
+            const entries = JSON.parse(localStorage.getItem('moodEntries')) || [];
+            const myEntries = entries.filter(e => e.uid === currentUser.uid);
+
+            if (myEntries.length === 0) {
+                document.getElementById('ai-report').innerText = "분석할 데이터가 부족합니다. 매일 감정을 기록해보세요!";
+                return;
+            }
+
+            // 감정 빈도 집계
+            const moodCounts = { "행복": 0, "보통": 0, "우울": 0, "화남": 0, "피곤": 0 };
+            myEntries.forEach(e => moodCounts[e.mood]++);
+
+            const ctxMood = document.getElementById('moodChart').getContext('2d');
+            if (moodChartInstance) moodChartInstance.destroy();
+            moodChartInstance = new Chart(ctxMood, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(moodCounts),
+                    datasets: [{
+                        data: Object.values(moodCounts),
+                        backgroundColor: ['#fbbf24', '#34d399', '#60a5fa', '#f87171', '#94a3b8']
+                    }]
+                },
+                options: { maintainAspectRatio: false }
+            });
+
+            // 스트레스 요인 집계
+            const stressStats = {};
+            myEntries.forEach(e => {
+                e.stressFactors.forEach(s => {
+                    stressStats[s.name] = (stressStats[s.name] || 0) + s.severity;
+                });
+            });
+
+            const ctxStress = document.getElementById('stressChart').getContext('2d');
+            if (stressChartInstance) stressChartInstance.destroy();
+            stressChartInstance = new Chart(ctxStress, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(stressStats),
+                    datasets: [{
+                        label: '스트레스 강도 누적',
+                        data: Object.values(stressStats),
+                        backgroundColor: '#6366f1'
+                    }]
+                },
+                options: { maintainAspectRatio: false }
+            });
+
+            // AI 리포트 생성 (로직 기반)
+            generateReport(myEntries, moodCounts, stressStats);
+        }
+
+        function generateReport(entries, moods, stress) {
+            const topMood = Object.keys(moods).reduce((a, b) => moods[a] > moods[b] ? a : b);
+            const topStress = Object.keys(stress).reduce((a, b) => stress[a] > stress[b] ? a : b, "없음");
+            
+            let text = `최근 30일 동안 당신이 가장 많이 느낀 감정은 <strong>'${topMood}'</strong>입니다. `;
+            
+            if (topMood === '우울' || topMood === '피곤') {
+                text += `휴식이 필요한 시기인 것 같네요. `;
+            } else if (topMood === '행복') {
+                text += `매우 긍정적인 정서 상태를 유지하고 계시네요! `;
+            }
+
+            if (topStress !== "없음") {
+                text += `<br><br>가장 큰 스트레스 요인은 <strong>'${topStress}'</strong>(으)로 분석되었습니다. 해당 요인이 발생할 때 감정 변화가 큰지 기록을 통해 확인해보세요.`;
+            }
+
+            document.getElementById('ai-report').innerHTML = text;
+        }
+    </script>
+</body>
+</html>
